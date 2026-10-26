@@ -1,0 +1,16 @@
+name: Feature request
+description: Suggest an improvement for the ultrawide fix.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would you like?
+      description: Describe the improvement and where in the game it matters.
+    validations:
+      required: true
+  - type: input
+    id: resolution
+    attributes:
+      label: Your resolution
+      placeholder: 5120x1440

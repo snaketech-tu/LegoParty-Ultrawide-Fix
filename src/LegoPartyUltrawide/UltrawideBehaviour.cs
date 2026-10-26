@@ -33,7 +33,7 @@ public class UltrawideBehaviour : MonoBehaviour
         if (Plugin.VerboseLogging.Value && Time.realtimeSinceStartup > _nextDiagnostics)
         {
             _nextDiagnostics = Time.realtimeSinceStartup + 30f;
-            LogDiagnostics();
+            try { LogDiagnostics(); } catch (Exception e) { Plugin.Logger.LogError(e); }
         }
     }
 
@@ -46,23 +46,40 @@ public class UltrawideBehaviour : MonoBehaviour
     }
 
     // Makes every live camera service and letterbox overlay pick up the unlocked aspect ratio.
+    // Each part only runs if its feature was applied, so it never touches game code that failed the startup check.
     internal static void RefreshAll()
+    {
+        if (Plugin.CameraFixActive) RecomputeCameras();
+        if (Plugin.LetterboxFixActive) RefreshLetterboxes();
+    }
+
+    private static void RecomputeCameras()
     {
         foreach (var service in Resources.FindObjectsOfTypeAll<CameraService>())
             service.RecomputePixelRect();
+    }
+
+    private static void RefreshLetterboxes()
+    {
         foreach (var overlay in Resources.FindObjectsOfTypeAll<LetterboxOverlay>())
-            Patches.FixLetterbox(overlay);
+            LetterboxPatches.FixLetterbox(overlay);
     }
 
     private static void LogDiagnostics()
     {
         var sb = new StringBuilder("Diagnostics:\n");
         sb.AppendLine($"  Screen {Screen.width}x{Screen.height}, mode {Screen.fullScreenMode}");
-        sb.AppendLine($"  Aspect clamp min={CameraService.MinHorizontalAspectRatio} max={CameraService.MaxHorizontalAspectRatio}");
-        foreach (var service in Resources.FindObjectsOfTypeAll<CameraService>())
-            sb.AppendLine($"  CameraService pixelRect={service.PixelRect}");
+        sb.AppendLine($"  Camera fix active={Plugin.CameraFixActive}, letterbox fix active={Plugin.LetterboxFixActive}");
+        try { AppendCameraServices(sb); } catch (Exception e) { sb.AppendLine($"  CameraService unavailable: {e.Message}"); }
         foreach (var cam in Camera.allCameras)
             sb.AppendLine($"  Camera '{cam.name}' rect={cam.rect} pixelRect={cam.pixelRect} fov={cam.fieldOfView:0.#} aspect={cam.aspect:0.###}");
         Plugin.Logger.LogInfo(sb.ToString());
+    }
+
+    private static void AppendCameraServices(StringBuilder sb)
+    {
+        sb.AppendLine($"  Aspect clamp min={CameraService.MinHorizontalAspectRatio} max={CameraService.MaxHorizontalAspectRatio}");
+        foreach (var service in Resources.FindObjectsOfTypeAll<CameraService>())
+            sb.AppendLine($"  CameraService pixelRect={service.PixelRect}");
     }
 }

@@ -18,7 +18,10 @@ public class Plugin : BasePlugin
 {
     public const string Guid = "snaketech.legoparty.ultrawide";
     public const string Name = "LEGO Party Ultrawide";
-    public const string Version = "1.0.0";
+    public const string Version = "1.1.0";
+
+    // Game version this release was tested with. Other versions still load; the log just says so.
+    private const string TestedGameVersion = "1.6.62";
 
     internal static ManualLogSource Logger;
 
@@ -29,6 +32,9 @@ public class Plugin : BasePlugin
     internal static ConfigEntry<int> ForceHeight;
     internal static ConfigEntry<FullScreenMode> ForceMode;
     internal static ConfigEntry<bool> VerboseLogging;
+
+    internal static bool CameraFixActive;
+    internal static bool LetterboxFixActive;
 
     public override void Load()
     {
@@ -56,18 +62,46 @@ public class Plugin : BasePlugin
             return;
         }
 
-        new Harmony(Guid).PatchAll(typeof(Patches));
+        LogGameVersion();
+
+        // The camera fix and the preview fix only make sense together: without the second, minigame
+        // previews would be squashed. Each feature is checked and patched on its own, so a game update that
+        // breaks one of them leaves the game in its normal 16:9 behaviour instead of crashing it.
+        CameraFixActive = SafePatcher.TryApply("camera widening", typeof(CameraPatches), typeof(PipPatches));
+        LetterboxFixActive = SafePatcher.TryApply("letterbox border fix", typeof(LetterboxPatches));
+
         ClassInjector.RegisterTypeInIl2Cpp<UltrawideBehaviour>();
         AddComponent<UltrawideBehaviour>();
-        Log.LogInfo($"{Name} {Version} loaded.");
+        Log.LogInfo(CameraFixActive
+            ? $"{Name} {Version} loaded."
+            : $"{Name} {Version} loaded, but the game runs in its normal 16:9 mode (see the warnings above).");
+    }
+
+    private void LogGameVersion()
+    {
+        try
+        {
+            string version = Application.version;
+            if (version == TestedGameVersion)
+                Log.LogInfo($"Game version {version}.");
+            else
+                Log.LogWarning($"Game version {version} has not been tested with this release (tested: {TestedGameVersion}). " +
+                               "If something looks wrong, please report it with this log.");
+        }
+        catch (Exception e)
+        {
+            Log.LogWarning($"Could not read the game version: {e.Message}");
+        }
     }
 
     // Unlimited is expressed as a very wide ratio so the game's own clamp math still runs.
     internal static float EffectiveMaxAspect => MaxAspectRatio.Value <= 0f ? 100f : MaxAspectRatio.Value;
 }
 
-internal static class Patches
+internal static class CameraPatches
 {
+    private const float SixteenByNine = 16f / 9f;
+
     // The game hard-codes a 16:9 clamp here (the min/max ratio constants are inlined into
     // native code, so changing the static fields has no effect). Widen the rect it returns.
     [HarmonyPostfix]
@@ -84,8 +118,30 @@ internal static class Patches
         catch (Exception e) { Plugin.Logger.LogError(e); }
     }
 
-    // Picture-in-picture minigame previews size their render texture from CameraService.PixelRect but
-    // display it in a fixed 16:9 frame. Hand them the original 16:9 rect while the texture is created.
+    internal static Rect WidenRect(Vector2 screen, Rect rect)
+    {
+        // Only touch the pillarboxed case; narrower-than-16:9 letterboxing stays as the game wants.
+        if (screen.y <= 0f || rect.height <= 0f || rect.width >= screen.x - 0.5f) return rect;
+        if (screen.x / screen.y <= rect.width / rect.height + 0.001f) return rect;
+
+        float width = Mathf.Min(screen.x, rect.height * Plugin.EffectiveMaxAspect);
+        float x = Mathf.Round((screen.x - width) * 0.5f);
+        return new Rect(x, rect.y, width, rect.height);
+    }
+
+    internal static Rect SixteenByNineRect(Rect rect)
+    {
+        float width = rect.height * SixteenByNine;
+        return new Rect(rect.x + (rect.width - width) * 0.5f, rect.y, width, rect.height);
+    }
+
+    internal static bool IsWiderThan16By9(Rect rect) => rect.height > 0f && rect.width / rect.height > SixteenByNine + 0.001f;
+}
+
+// Picture-in-picture minigame previews size their render texture from CameraService.PixelRect but
+// display it in a fixed 16:9 frame. Hand them the original 16:9 rect while the texture is created.
+internal static class PipPatches
+{
     private static readonly List<(CameraService service, Rect rect)> _swappedRects = new();
 
     [HarmonyPrefix]
@@ -98,10 +154,9 @@ internal static class Patches
             foreach (var service in Resources.FindObjectsOfTypeAll<CameraService>())
             {
                 var rect = service._pixelRect;
-                if (rect.height <= 0f || rect.width / rect.height <= SixteenByNine + 0.001f) continue;
+                if (!CameraPatches.IsWiderThan16By9(rect)) continue;
                 _swappedRects.Add((service, rect));
-                float width = rect.height * SixteenByNine;
-                service._pixelRect = new Rect(rect.x + (rect.width - width) * 0.5f, rect.y, width, rect.height);
+                service._pixelRect = CameraPatches.SixteenByNineRect(rect);
             }
         }
         catch (Exception e) { Plugin.Logger.LogError(e); }
@@ -111,27 +166,21 @@ internal static class Patches
     [HarmonyPatch(typeof(MinigamePIPGameView), nameof(MinigamePIPGameView.CreateAndAssignNewRenderTexture))]
     private static void PipCreatePostfix(MinigamePIPGameView __instance)
     {
-        foreach (var (service, rect) in _swappedRects)
-            if (service != null) service._pixelRect = rect;
-        _swappedRects.Clear();
+        try
+        {
+            foreach (var (service, rect) in _swappedRects)
+                if (service != null) service._pixelRect = rect;
+            _swappedRects.Clear();
 
-        if (Plugin.VerboseLogging.Value && __instance._renderTexture != null)
-            Plugin.Logger.LogInfo($"PIP render texture {__instance._renderTexture.width}x{__instance._renderTexture.height}");
+            if (Plugin.VerboseLogging.Value && __instance._renderTexture != null)
+                Plugin.Logger.LogInfo($"PIP render texture {__instance._renderTexture.width}x{__instance._renderTexture.height}");
+        }
+        catch (Exception e) { Plugin.Logger.LogError(e); }
     }
+}
 
-    private const float SixteenByNine = 16f / 9f;
-
-    internal static Rect WidenRect(Vector2 screen, Rect rect)
-    {
-        // Only touch the pillarboxed case; narrower-than-16:9 letterboxing stays as the game wants.
-        if (screen.y <= 0f || rect.height <= 0f || rect.width >= screen.x - 0.5f) return rect;
-        if (screen.x / screen.y <= rect.width / rect.height + 0.001f) return rect;
-
-        float width = Mathf.Min(screen.x, rect.height * Plugin.EffectiveMaxAspect);
-        float x = Mathf.Round((screen.x - width) * 0.5f);
-        return new Rect(x, rect.y, width, rect.height);
-    }
-
+internal static class LetterboxPatches
+{
     [HarmonyPostfix]
     [HarmonyPatch(typeof(LetterboxOverlay), nameof(LetterboxOverlay.Start))]
     private static void LetterboxStartPostfix(LetterboxOverlay __instance) => FixLetterbox(__instance);
@@ -146,13 +195,17 @@ internal static class Patches
 
     internal static void FixLetterbox(LetterboxOverlay overlay)
     {
-        if (overlay == null) return;
-        var fitter = overlay._maxRatioFitter;
-        if (fitter != null && fitter.aspectRatio < Plugin.EffectiveMaxAspect)
-            fitter.aspectRatio = Plugin.EffectiveMaxAspect;
+        try
+        {
+            if (overlay == null) return;
+            var fitter = overlay._maxRatioFitter;
+            if (fitter != null && fitter.aspectRatio < Plugin.EffectiveMaxAspect)
+                fitter.aspectRatio = Plugin.EffectiveMaxAspect;
 
-        if (!Plugin.HideLetterboxBorders.Value || overlay._borders == null) return;
-        foreach (var border in overlay._borders)
-            if (border != null) border.enabled = false;
+            if (!Plugin.HideLetterboxBorders.Value || overlay._borders == null) return;
+            foreach (var border in overlay._borders)
+                if (border != null) border.enabled = false;
+        }
+        catch (Exception e) { Plugin.Logger.LogError(e); }
     }
 }

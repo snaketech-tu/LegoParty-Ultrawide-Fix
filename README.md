@@ -46,10 +46,28 @@ Every release lists SHA-256 checksums for its downloads in `SHA256SUMS.txt`.
 
 ## Uninstall
 
+Run the patcher and press **Uninstall**. If BepInEx also loads other mods in that folder, it asks whether to
+keep BepInEx (removing only this fix) or remove everything. The game's own files are never touched.
+
+By hand:
 - Disable only this fix: set `Enabled = false` in the config above, or delete `BepInEx\plugins\LegoPartyUltrawide`.
 - Disable BepInEx: set `enabled = false` in `doorstop_config.ini`.
 - Remove everything: delete `winhttp.dll`, `doorstop_config.ini`, `.doorstop_version`, `dotnet\` and `BepInEx\`
   from the game folder.
+
+## After a game update
+
+The plugin checks everything it hooks when the game starts. If an update renamed or removed something it relies
+on, that part of the fix switches itself off and the game runs in its normal 16:9 mode instead of crashing.
+`BepInEx\LogOutput.log` then contains a warning starting with "The camera widening could not be applied". It also
+notes when the game version differs from the one the release was tested with.
+
+## Reporting a problem
+
+Please use the [bug report form](../../issues/new/choose). It asks for your game version, resolution and
+`BepInEx\LogOutput.log`. Logging is off by default: run the patcher again with **Enable BepInEx logs** ticked
+(or set `Enabled = true` under `[Logging.Disk]` in `BepInEx\config\BepInEx.cfg`), then start the game and
+reproduce the problem.
 
 ## How it works
 

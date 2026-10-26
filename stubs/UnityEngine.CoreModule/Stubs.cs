@@ -79,6 +79,12 @@ namespace UnityEngine
         public static void SetResolution(int width, int height, FullScreenMode fullscreenMode) => throw null;
     }
 
+    public class Application : Il2CppSystem.Object
+    {
+        public Application(IntPtr pointer) : base(pointer) { }
+        public static string version => throw null;
+    }
+
     public class Time : Il2CppSystem.Object
     {
         public Time(IntPtr pointer) : base(pointer) { }

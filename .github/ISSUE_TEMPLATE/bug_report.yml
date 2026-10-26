@@ -1,0 +1,84 @@
+name: Bug report
+description: Something looks wrong or the game misbehaves with the fix installed.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! The answers below let me reproduce the problem without a lot of back and forth.
+  - type: input
+    id: game-version
+    attributes:
+      label: Game version
+      description: Shown at the bottom of the main menu's left bar, e.g. `v1.6.62`.
+      placeholder: v1.6.62
+    validations:
+      required: true
+  - type: input
+    id: mod-version
+    attributes:
+      label: Mod version
+      description: The release you installed, e.g. `v1.0.0`.
+      placeholder: v1.0.0
+    validations:
+      required: true
+  - type: input
+    id: resolution
+    attributes:
+      label: Resolution
+      description: Your in-game resolution, e.g. `3440x1440` or `5120x1440`.
+      placeholder: 3440x1440
+    validations:
+      required: true
+  - type: dropdown
+    id: display-mode
+    attributes:
+      label: Display mode
+      options:
+        - Fullscreen
+        - Borderless window
+        - Windowed
+        - Not sure
+    validations:
+      required: true
+  - type: dropdown
+    id: install-method
+    attributes:
+      label: How did you install the fix?
+      options:
+        - Patcher
+        - Manually (plugin zip + BepInEx)
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Where in the game it happens (menu, board, which minigame) and what you see. Screenshots help a lot.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+  - type: textarea
+    id: log
+    attributes:
+      label: LogOutput.log
+      description: |
+        BepInEx logging is off by default. To turn it on, run the patcher again with **Enable BepInEx logs** ticked,
+        or set `Enabled = true` under `[Logging.Disk]` in `BepInEx\config\BepInEx.cfg`. Start the game, reproduce
+        the problem, close the game, then drag `BepInEx\LogOutput.log` from the game folder into this box.
+    validations:
+      required: true
+  - type: textarea
+    id: config
+    attributes:
+      label: Mod config (optional)
+      description: Contents of `BepInEx\config\snaketech.legoparty.ultrawide.cfg` if you changed any settings.
+      render: ini
+  - type: textarea
+    id: other-mods
+    attributes:
+      label: Other mods (optional)
+      description: Any other BepInEx plugins in `BepInEx\plugins`.

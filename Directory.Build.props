@@ -1,6 +1,6 @@
 <Project>
   <PropertyGroup>
-    <Version>1.0.0</Version>
+    <Version>1.1.0</Version>
     <LangVersion>latest</LangVersion>
     <!-- BepInEx.Unity.IL2CPP lists a Cpp2IL build that only exists as a nearby pre-release; it is not used here. -->
     <NoWarn>$(NoWarn);NU1603</NoWarn>
