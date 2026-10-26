@@ -1,0 +1,15 @@
+<Project>
+  <PropertyGroup>
+    <Version>1.0.0</Version>
+    <LangVersion>latest</LangVersion>
+    <!-- BepInEx.Unity.IL2CPP lists a Cpp2IL build that only exists as a nearby pre-release; it is not used here. -->
+    <NoWarn>$(NoWarn);NU1603</NoWarn>
+    <!--
+      Pinned BepInEx build. The plugin compiles against this version's NuGet packages, and the patcher
+      downloads exactly this archive from builds.bepinex.dev and refuses it unless the SHA-256 matches.
+    -->
+    <BepInExVersion>6.0.0-be.791</BepInExVersion>
+    <BepInExUrl>https://builds.bepinex.dev/projects/bepinex_be/791/BepInEx-Unity.IL2CPP-win-x64-6.0.0-be.791%2Bb782da4.zip</BepInExUrl>
+    <BepInExSha256>bb1c510909b69522733791f3a0817a487379a52da6468a492f1c9c19b3ec6f9a</BepInExSha256>
+  </PropertyGroup>
+</Project>

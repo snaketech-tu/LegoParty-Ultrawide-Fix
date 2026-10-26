@@ -1,0 +1,44 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <AssemblyName>LegoPartyUltrawide</AssemblyName>
+    <RootNamespace>LegoPartyUltrawide</RootNamespace>
+    <Nullable>disable</Nullable>
+    <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
+    <GenerateDependencyFile>false</GenerateDependencyFile>
+    <!--
+      Optional: set GameDir (e.g. dotnet build -p:GameDir="E:\...\Lego Party") to compile against the real
+      interop assemblies BepInEx generated in that install and copy the DLL into its plugins folder.
+      Without it the build uses the stub reference assemblies in /stubs (this is what CI does).
+    -->
+    <GameInterop>$(GameDir)\BepInEx\interop</GameInterop>
+    <UseGameInterop Condition="'$(GameDir)' != '' And Exists('$(GameInterop)\Koala.Core.dll')">true</UseGameInterop>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BepInEx.Unity.IL2CPP" Version="$(BepInExVersion)" PrivateAssets="all" ExcludeAssets="runtime" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(UseGameInterop)' == 'true'">
+    <Reference Include="$(GameInterop)\Il2Cppmscorlib.dll" Private="false" />
+    <Reference Include="$(GameInterop)\UnityEngine.CoreModule.dll" Private="false" />
+    <Reference Include="$(GameInterop)\UnityEngine.UI.dll" Private="false" />
+    <Reference Include="$(GameInterop)\Koala.Core.dll" Private="false" />
+    <Reference Include="$(GameInterop)\Koala.UI.dll" Private="false" />
+    <Reference Include="$(GameInterop)\Koala.Minigames.dll" Private="false" />
+    <Reference Include="$(GameInterop)\Koala.Network.dll" Private="false" Condition="Exists('$(GameInterop)\Koala.Network.dll')" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(UseGameInterop)' != 'true'">
+    <ProjectReference Include="..\..\stubs\Il2Cppmscorlib\Il2Cppmscorlib.csproj" Private="false" />
+    <ProjectReference Include="..\..\stubs\UnityEngine.CoreModule\UnityEngine.CoreModule.csproj" Private="false" />
+    <ProjectReference Include="..\..\stubs\UnityEngine.UI\UnityEngine.UI.csproj" Private="false" />
+    <ProjectReference Include="..\..\stubs\Koala.Core\Koala.Core.csproj" Private="false" />
+    <ProjectReference Include="..\..\stubs\Koala.UI\Koala.UI.csproj" Private="false" />
+    <ProjectReference Include="..\..\stubs\Koala.Minigames\Koala.Minigames.csproj" Private="false" />
+  </ItemGroup>
+
+  <Target Name="CopyToGame" AfterTargets="Build" Condition="'$(UseGameInterop)' == 'true'">
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(GameDir)\BepInEx\plugins\LegoPartyUltrawide" />
+  </Target>
+</Project>

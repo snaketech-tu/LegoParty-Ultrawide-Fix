@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- .NET Framework 4.8 ships with Windows 10/11, so the patcher runs without installing a runtime. -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net48</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>annotations</Nullable>
+    <AssemblyName>LegoPartyUltrawidePatcher</AssemblyName>
+    <RootNamespace>LegoPartyUltrawidePatcher</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <PluginDll>..\LegoPartyUltrawide\bin\$(Configuration)\net6.0\LegoPartyUltrawide.dll</PluginDll>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System.IO.Compression" />
+    <Reference Include="System.Net.Http" />
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+    <!-- Build the plugin first; its DLL is embedded, not referenced. -->
+    <ProjectReference Include="..\LegoPartyUltrawide\LegoPartyUltrawide.csproj" ReferenceOutputAssembly="false" SkipGetTargetFrameworkProperties="true" />
+    <EmbeddedResource Include="$(PluginDll)" LogicalName="LegoPartyUltrawide.dll" />
+  </ItemGroup>
+  <!-- Generates the pinned BepInEx download info from Directory.Build.props. -->
+  <Target Name="GenerateBepInExInfo" BeforeTargets="CoreCompile">
+    <PropertyGroup>
+      <BepInExInfoFile>$(IntermediateOutputPath)BepInExInfo.g.cs</BepInExInfoFile>
+    </PropertyGroup>
+    <WriteLinesToFile File="$(BepInExInfoFile)" Overwrite="true" WriteOnlyWhenDifferent="true" Lines="namespace LegoPartyUltrawidePatcher { internal static class BepInExInfo { public const string Version = &quot;$(BepInExVersion)&quot;%3B public const string Url = &quot;$(BepInExUrl)&quot;%3B public const string Sha256 = &quot;$(BepInExSha256)&quot;%3B } }" />
+    <ItemGroup>
+      <Compile Include="$(BepInExInfoFile)" />
+    </ItemGroup>
+  </Target>
+</Project>

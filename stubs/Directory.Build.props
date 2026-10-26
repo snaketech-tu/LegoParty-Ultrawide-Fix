@@ -1,0 +1,18 @@
+<Project>
+  <Import Project="../Directory.Build.props" />
+  <!--
+    Reference-only stand-ins for the assemblies BepInEx generates from the game ("interop").
+    They declare just the names and signatures the plugin uses so it can be compiled without the game.
+    They are never shipped: at runtime the plugin binds to the real interop assemblies by name.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <Nullable>disable</Nullable>
+    <NoWarn>$(NoWarn);CS0626;CS0824</NoWarn>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <ProduceReferenceAssembly>false</ProduceReferenceAssembly>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="BepInEx.Unity.IL2CPP" Version="$(BepInExVersion)" PrivateAssets="all" />
+  </ItemGroup>
+</Project>
